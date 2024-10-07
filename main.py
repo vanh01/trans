@@ -26,7 +26,8 @@ def translate_to_lang(sub: Subtitle, sl: str, dl: str, o: int):
 
     text = sub.text
     try:
-        new_text = ts.translate_text(text, from_language=sl, to_language=dl, translator="bing")
+        new_text = ts.translate_text(
+            text, from_language=sl, to_language=dl, translator="bing")
         if o == 1:
             sub.text = new_text
         elif o == 2:
@@ -37,7 +38,7 @@ def translate_to_lang(sub: Subtitle, sl: str, dl: str, o: int):
         pass
 
 
-def convert_subtitle_to_2lang(subtitles: list[Subtitle], sl: str, dl: str, o: int):
+def convert_subtitle_to_2lang(subtitles: list[Subtitle], sl: str, dl: str, o: int, level: int):
     sub_lens = len(subtitles)
     i = 0
 
@@ -46,7 +47,8 @@ def convert_subtitle_to_2lang(subtitles: list[Subtitle], sl: str, dl: str, o: in
         start_idx = i
         threads = []
         while i < sub_lens and i < end_idx:
-            threads.append(threading.Thread(target=translate_to_lang, args=(subtitles[i], sl, dl, o,)))
+            threads.append(threading.Thread(
+                target=translate_to_lang, args=(subtitles[i], sl, dl, o,)))
             i += 1
 
         i = start_idx
@@ -58,6 +60,9 @@ def convert_subtitle_to_2lang(subtitles: list[Subtitle], sl: str, dl: str, o: in
         while i < sub_lens and i < end_idx:
             threads[i-start_idx].join()
             i += 1
+        percent = i*100.0/sub_lens
+        print(
+            f"{"  " * level}|- The translation process has reached {round(percent, 2)}%", end="\r")
 
     return subtitles
 
@@ -113,19 +118,22 @@ def get_folder_names(folder_p: str):
 
 
 def gen_for_file(folder_p: str, file: str, level: int, sl: str, dl: str, k: int):
-    print("  " * level + "  |- Processing for file", "'{0}'".format(file))
+    level = level+1
+    print("  " * level + "|- Processing for file", "'{0}'".format(file))
 
     file_name = os.path.basename(file)
     file_name_without_extension, _ = os.path.splitext(file_name)
-    file_name = file_name_without_extension + (f"_{sl}-{dl}.srt" if k == 2 else f"_{dl}.srt")
+    file_name = file_name_without_extension + \
+        (f"_{sl}-{dl}.srt" if k == 2 else f"_{dl}.srt")
     new_file_name = os.path.join(folder_p + "/result", file_name)
     if os.path.isfile(new_file_name):
         return
 
     file_path = os.path.join(folder_p, file)
     subtitles = get_subtitles(file_path)
-    subtitles = convert_subtitle_to_2lang(subtitles, sl, dl, k)
+    subtitles = convert_subtitle_to_2lang(subtitles, sl, dl, k, level+1)
     gen_subtitles(subtitles, new_file_name)
+    print("  " * level + f"|- {file} has been successfully processed")
 
 
 def gen_for_folder(folder_p: str, level: int, sl: str, dl: str, k: int, r: int = 1):
@@ -167,7 +175,8 @@ def format_time(seconds: float):
     seconds %= 60
     milliseconds = round((seconds - math.floor(seconds)) * 1000)
     seconds = math.floor(seconds)
-    formatted_time = f"{hours:02d}:{minutes:02d}:{seconds:01d},{milliseconds:03d}"
+    formatted_time = f"{hours:02d}:{minutes:02d}:{
+        seconds:01d},{milliseconds:03d}"
 
     return formatted_time
 
@@ -180,7 +189,7 @@ def generate_subtitle_file(subtitle_file: str, sl: str, dl: str, segments: list[
         time = f"{segment_start} --> {segment_end}"
         subtitles.append(Subtitle(time=time, text=segment.text.strip()))
 
-    subtitles = convert_subtitle_to_2lang(subtitles, sl, dl, o)
+    subtitles = convert_subtitle_to_2lang(subtitles, sl, dl, o, level=0)
     gen_subtitles(subtitles, subtitle_file)
 
 
@@ -193,16 +202,19 @@ def generate_subtitle_file(subtitle_file: str, sl: str, dl: str, segments: list[
 def trans(p: str, sl: str, dl: str, k: int, r: int):
     """Translate from english to another language by folder/file path"""
     if sl not in constants.LANGUAGES or dl not in constants.LANGUAGES:
-        click.echo(f"'{sl}' or '{dl}' is not in the list of supported languages.")
+        click.echo(f"'{sl}' or '{
+                   dl}' is not in the list of supported languages.")
         click.echo(f"The following languages are supported:")
-        click.echo("\n".join([f"  - {item}: {constants.LANGUAGES[item]}" for item in constants.LANGUAGES]))
+        click.echo("\n".join(
+            [f"  - {item}: {constants.LANGUAGES[item]}" for item in constants.LANGUAGES]))
         return
 
     if os.path.isfile(p) and p.endswith(".srt"):
         base_folder = os.path.dirname(p)
         if not os.path.isdir(base_folder + "/result"):
             os.mkdir(base_folder + "/result")
-        gen_for_file(base_folder, os.path.basename(p), 0, sl, dl, 2 if k == 1 else 1)
+        gen_for_file(base_folder, os.path.basename(p),
+                     0, sl, dl, 2 if k == 1 else 1)
         return
 
     if os.path.isdir(p):
@@ -224,7 +236,8 @@ def subv(vp: str, sl: str, dl: str, k: int):
         return
 
     if k == 1 and dl == "":
-        click.echo(f"You can not keep both source & destination language without --dl input.")
+        click.echo(
+            f"You can not keep both source & destination language without --dl input.")
         return
 
     flag = False
@@ -239,7 +252,8 @@ def subv(vp: str, sl: str, dl: str, k: int):
 
     if flag:
         click.echo(f"The following languages are supported:")
-        click.echo("\n".join([f"  - {item}: {constants.LANGUAGES[item]}" for item in constants.LANGUAGES]))
+        click.echo("\n".join(
+            [f"  - {item}: {constants.LANGUAGES[item]}" for item in constants.LANGUAGES]))
         return
 
     file_name, _ = os.path.splitext(vp)
