@@ -1,11 +1,12 @@
 import os
 import math
+import constants
 import threading
 import ffmpeg
 import click
+import translators as ts
 
 from dataclasses import dataclass
-from googletrans import Translator, constants
 from faster_whisper import WhisperModel, transcribe
 
 
@@ -25,35 +26,37 @@ def translate_to_lang(sub: Subtitle, sl: str, dl: str, o: int):
 
     text = sub.text
     try:
-        translator = Translator()
-        translated = translator.translate(text, src=sl, dest=dl)
+        new_text = ts.translate_text(text, from_language=sl, to_language=dl, translator="bing")
         if o == 1:
-            sub.text = translated.text
+            sub.text = new_text
         elif o == 2:
-            sub.text = text + "\n" + translated.text
-    except Exception:
+            sub.text = text + "\n" + new_text
+    except Exception as e:
         print("** Translating for '{0}' was failed **".format(text))
+        print(e)
         pass
 
 
 def convert_subtitle_to_2lang(subtitles: list[Subtitle], sl: str, dl: str, o: int):
-    threads = []
-    for sub in subtitles:
-        threads.append(threading.Thread(target=translate_to_lang, args=(sub, sl, dl, o,)))
-
     sub_lens = len(subtitles)
     i = 0
 
     while i < sub_lens:
-        ii = i + 10
-        tempi = i
-        while i < sub_lens and i < ii:
-            threads[i].start()
+        end_idx = i + 10
+        start_idx = i
+        threads = []
+        while i < sub_lens and i < end_idx:
+            threads.append(threading.Thread(target=translate_to_lang, args=(subtitles[i], sl, dl, o,)))
             i += 1
 
-        i = tempi
-        while i < sub_lens and i < ii:
-            threads[i].join()
+        i = start_idx
+        while i < sub_lens and i < end_idx:
+            threads[i-start_idx].start()
+            i += 1
+
+        i = start_idx
+        while i < sub_lens and i < end_idx:
+            threads[i-start_idx].join()
             i += 1
 
     return subtitles
