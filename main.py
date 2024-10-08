@@ -117,7 +117,7 @@ def get_folder_names(folder_p: str):
     return folders
 
 
-def gen_for_file(folder_p: str, file: str, level: int, sl: str, dl: str, k: int):
+def gen_for_file(folder_p: str, file: str, level: int, sl: str, dl: str, k: int, f: int):
     level = level+1
     print("  " * level + "|- Processing for file", "'{0}'".format(file))
 
@@ -126,7 +126,7 @@ def gen_for_file(folder_p: str, file: str, level: int, sl: str, dl: str, k: int)
     file_name = file_name_without_extension + \
         (f"_{sl}-{dl}.srt" if k == 2 else f"_{dl}.srt")
     new_file_name = os.path.join(folder_p + "/result", file_name)
-    if os.path.isfile(new_file_name):
+    if os.path.isfile(new_file_name) and f == 0:
         return
 
     file_path = os.path.join(folder_p, file)
@@ -136,20 +136,20 @@ def gen_for_file(folder_p: str, file: str, level: int, sl: str, dl: str, k: int)
     print("  " * level + f"|- {file} has been successfully processed")
 
 
-def gen_for_folder(folder_p: str, level: int, sl: str, dl: str, k: int, r: int = 1):
+def gen_for_folder(folder_p: str, level: int, sl: str, dl: str, k: int, f: int, r: int = 1):
     print(f"{"  "*level}{"-"*20}")
     print(f"{"  "*level}|+ Processing for folder '{folder_p}'")
     file_srt = get_file_names(folder_p)
     if not os.path.isdir(folder_p + "/result") and len(file_srt) > 0:
         os.mkdir(folder_p + "/result")
     for file in file_srt:
-        gen_for_file(folder_p, file, level, sl, dl, k)
+        gen_for_file(folder_p, file, level, sl, dl, k, f)
 
     if r == 0:
         return
 
     for folder in get_folder_names(folder_p):
-        gen_for_folder(folder, level + 1, sl, dl, k)
+        gen_for_folder(folder, level + 1, sl, dl, k, f)
 
 
 def extract_audio(input_video: str):
@@ -199,7 +199,8 @@ def generate_subtitle_file(subtitle_file: str, sl: str, dl: str, segments: list[
 @click.argument("dl")
 @click.option("--k", count=True, help="Keep both source & destination language.")
 @click.option("--r", count=True, help="Recursively translate for folder.")
-def trans(p: str, sl: str, dl: str, k: int, r: int):
+@click.option("--f", count=True, help="Overwrite if the translated file already exists.")
+def trans(p: str, sl: str, dl: str, k: int, r: int, f: int):
     """Translate from english to another language by folder/file path"""
     if sl not in constants.LANGUAGES or dl not in constants.LANGUAGES:
         click.echo(f"'{sl}' or '{
@@ -214,11 +215,11 @@ def trans(p: str, sl: str, dl: str, k: int, r: int):
         if not os.path.isdir(base_folder + "/result"):
             os.mkdir(base_folder + "/result")
         gen_for_file(base_folder, os.path.basename(p),
-                     0, sl, dl, 2 if k == 1 else 1)
+                     0, sl, dl, 2 if k == 1 else 1, f)
         return
 
     if os.path.isdir(p):
-        gen_for_folder(p, 0, sl, dl, 2 if k == 1 else 1, r)
+        gen_for_folder(p, 0, sl, dl, 2 if k == 1 else 1, f, r)
         return
 
     click.echo(f"'{p}' is not the path of srt file or folder.")

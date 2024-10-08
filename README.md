@@ -25,6 +25,7 @@ Parameters:
 Options:
   --k     Keep both source & destination language.
   --r     Recursively translate for folder.
+  --f     Overwrite if the translated file already exists.
   --help  Show this message and exit.
 ```
 
