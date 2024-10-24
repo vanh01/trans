@@ -26,6 +26,7 @@ Options:
   --k     Keep both source & destination language.
   --r     Recursively translate for folder.
   --f     Overwrite if the translated file already exists.
+  --t INTEGER  Number of requests sent simultaneously to the api for translation.  [default: 10]
   --help  Show this message and exit.
 ```
 

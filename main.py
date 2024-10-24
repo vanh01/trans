@@ -9,6 +9,8 @@ import translators as ts
 from dataclasses import dataclass
 from faster_whisper import WhisperModel, transcribe
 
+CONCURRENT_REQUEST = 10
+
 
 @dataclass
 class Subtitle:
@@ -43,7 +45,7 @@ def convert_subtitle_to_2lang(subtitles: list[Subtitle], sl: str, dl: str, o: in
     i = 0
 
     while i < sub_lens:
-        end_idx = i + 10
+        end_idx = i + CONCURRENT_REQUEST
         start_idx = i
         threads = []
         while i < sub_lens and i < end_idx:
@@ -78,7 +80,7 @@ def gen_subtitles(subtitles: list[Subtitle], file_path: str):
 
 
 def get_subtitles(file_path: str):
-    with open(file_path, 'r', encoding="utf-8") as FILE:
+    with open(file_path, 'r', encoding="utf-8", errors="ignore") as FILE:
         lines = FILE.readlines()
 
     subtitles = []
@@ -200,8 +202,13 @@ def generate_subtitle_file(subtitle_file: str, sl: str, dl: str, segments: list[
 @click.option("--k", count=True, help="Keep both source & destination language.")
 @click.option("--r", count=True, help="Recursively translate for folder.")
 @click.option("--f", count=True, help="Overwrite if the translated file already exists.")
-def trans(p: str, sl: str, dl: str, k: int, r: int, f: int):
+@click.option("--t", default=10, show_default=True,
+              help="Number of requests sent simultaneously to the api for translation.")
+def trans(p: str, sl: str, dl: str, k: int, r: int, f: int, t: int):
     """Translate from english to another language by folder/file path"""
+    global CONCURRENT_REQUEST
+    if t > 0:
+        CONCURRENT_REQUEST = t
     if sl not in constants.LANGUAGES or dl not in constants.LANGUAGES:
         click.echo(f"'{sl}' or '{
                    dl}' is not in the list of supported languages.")
